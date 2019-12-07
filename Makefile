@@ -9,7 +9,7 @@ test:
 	go test $(TEST)
 
 build:
-	go build -o terraform-provider-aws-serverless .
+	go build -o terraform-provider-serverless .
 	
 clean:
 	go clean
