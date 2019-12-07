@@ -7,3 +7,9 @@ fmt:
 
 test:
 	go test $(TEST)
+
+build:
+	go build -o terraform-provider-aws-serverless .
+	
+clean:
+	go clean
