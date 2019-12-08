@@ -43,119 +43,109 @@ func ResourceFunctionS3() *schema.Resource {
 		Delete: resourceFunctionS3Delete,
 
 		Schema: map[string]*schema.Schema{
-			"function": {
+			"filename": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"s3_bucket", "s3_key", "s3_object_version"},
+			},
+			"s3_bucket": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"filename"},
+			},
+			"s3_key": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"filename"},
+			},
+			"s3_object_version": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"filename"},
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"memory_size": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  128,
+			},
+			"runtime": {
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringInSlice(validLambdaRuntimes, false),
+			},
+			"environment": {
 				Type:     schema.TypeList,
-				Required: true,
-				MinItems: 1,
+				Optional: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"filename": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"function.0.s3_bucket", "function.0.s3_key", "function.0.s3_object_version"},
-						},
-						"s3_bucket": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"function.0.filename"},
-						},
-						"s3_key": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"function.0.filename"},
-						},
-						"s3_object_version": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"function.0.filename"},
-						},
-						"description": {
-							Type:     schema.TypeString,
+						"variables": {
+							Type:     schema.TypeMap,
 							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
-						"memory_size": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  128,
-						},
-						"runtime": {
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringInSlice(validLambdaRuntimes, false),
-						},
-						"environment": {
-							Type:     schema.TypeList,
-							Optional: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"variables": {
-										Type:     schema.TypeMap,
-										Optional: true,
-										Elem:     &schema.Schema{Type: schema.TypeString},
-									},
-								},
-							},
-						},
-						"timeout": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  3,
-						},
-						"vpc_config": {
-							Type:     schema.TypeList,
-							Optional: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"subnet_ids": {
-										Type:     schema.TypeSet,
-										Required: true,
-										Elem:     &schema.Schema{Type: schema.TypeString},
-										Set:      schema.HashString,
-									},
-									"security_group_ids": {
-										Type:     schema.TypeSet,
-										Required: true,
-										Elem:     &schema.Schema{Type: schema.TypeString},
-										Set:      schema.HashString,
-									},
-									"vpc_id": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-								},
-							},
-						},
-						"function_name": {
-							Type:     schema.TypeString,
+					},
+				},
+			},
+			"timeout": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  3,
+			},
+			"vpc_config": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"subnet_ids": {
+							Type:     schema.TypeSet,
 							Required: true,
-							ForceNew: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Set:      schema.HashString,
 						},
-						"handler": {
-							Type:     schema.TypeString,
+						"security_group_ids": {
+							Type:     schema.TypeSet,
 							Required: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Set:      schema.HashString,
 						},
-						"arn": {
+						"vpc_id": {
 							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"last_modified": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"source_code_hash": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
-						},
-						"source_code_size": {
-							Type:     schema.TypeInt,
 							Computed: true,
 						},
 					},
 				},
+			},
+			"function_name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"handler": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"arn": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"last_modified": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"source_code_hash": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"source_code_size": {
+				Type:     schema.TypeInt,
+				Computed: true,
 			},
 			"event": {
 				Type:     schema.TypeList,
@@ -235,16 +225,30 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 	s3Key, keyOk := d.GetOk("s3_key")
 	s3ObjectVersion, versionOk := d.GetOk("s3_object_version")
 
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	log.Printf("OK 0")
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+
 	if !hasFilename && !bucketOk && !keyOk && !versionOk {
 		return errors.New("filename or s3_* attributes must be set")
 	}
+
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	log.Printf("OK 1")
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 	var functionCode *lambda.FunctionCode
 	if hasFilename {
 		// Grab an exclusive lock so that we're only reading one function into
 		// memory at a time.
 		// See https://github.com/hashicorp/terraform/issues/9364
+		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+		log.Printf("OK 1.1")
+		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 		awsMutexKV.Lock(awsMutexLambdaKey)
+		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+		log.Printf("OK 1.2")
+		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 		defer awsMutexKV.Unlock(awsMutexLambdaKey)
 		file, err := loadFileContent(filename.(string))
 		if err != nil {
@@ -265,6 +269,10 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 			functionCode.S3ObjectVersion = aws.String(s3ObjectVersion.(string))
 		}
 	}
+
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	log.Printf("OK 2")
+	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 	funcParam := &lambda.CreateFunctionInput{
 		Code:         functionCode,
