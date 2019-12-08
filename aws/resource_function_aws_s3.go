@@ -412,8 +412,8 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 			FunctionName: aws.String(d.Get("function_name").(string)),
 		},
 		S3ReadEvent: function.S3ReadEvent{
-			Bucket: aws.String(event["bucket"].(string)),
-			// StatementId: aws.String(event["statement_id"].(string)),
+			Bucket:      aws.String(event["bucket"].(string)),
+			StatementId: aws.String(event["statement_id"].(string)),
 		},
 	}
 
@@ -467,9 +467,13 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 	d.Set("source_code_hash", functionOutput["CodeSha256"])
 	d.Set("source_code_size", functionOutput["CodeSize"])
 
-	d.Set("bucket", functionOutput["Bucket"])
-	d.Set("statement_id", functionOutput["StatementId"])
-	// d.Set("event_types", functionOutput["S3EventType"])
+	d.Set("event", []interface{}{
+		map[string]interface{}{
+			"bucket":       functionOutput["Bucket"],
+			"statement_id": functionOutput["StatementId"],
+			"event_types": functionOutput["S3Events"],
+		},
+	})
 
 	// layers := flattenLambdaLayers(function.Layers)
 	// log.Printf("[INFO] Setting Lambda %s Layers %#v from API", d.Id(), layers)
@@ -559,8 +563,8 @@ func resourceFunctionS3Delete(d *schema.ResourceData, m interface{}) error {
 			FunctionName: aws.String(d.Get("function_name").(string)),
 		},
 		S3DeleteEvent: function.S3DeleteEvent{
-			Bucket: aws.String(event["bucket"].(string)),
-			// StatementId: aws.String(event["statement_id"].(string)),
+			Bucket:      aws.String(event["bucket"].(string)),
+			StatementId: aws.String(event["statement_id"].(string)),
 		},
 	}
 

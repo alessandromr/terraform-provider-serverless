@@ -13,10 +13,10 @@ github.com/agext/levenshtein v1.2.1/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=
 github.com/agext/levenshtein v1.2.2/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412/go.mod h1:WPjqKcmVOxf0XSf3YxCJs6N6AOSrOx3obionmG7T0y0=
-github.com/alessandromr/go-aws-serverless v0.0.0-20191208212935-46955ddaf606 h1:tWCoA82r6YRikcZxLUMZY1FCbWTp0zBavcBc9elu6DE=
-github.com/alessandromr/go-aws-serverless v0.0.0-20191208212935-46955ddaf606/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
-github.com/alessandromr/go-aws-serverless v0.0.0-20191208221335-454345bbf382 h1:UW3erwayeb14gojRvcv5uV3q8sSZaqZ0os1+f5rC6SM=
-github.com/alessandromr/go-aws-serverless v0.0.0-20191208221335-454345bbf382/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191208225101-8983348fd256 h1:vmn9NxHn9w/jzqwUqR1mWJb6Q0x9S//YnFR0fTkvCZ8=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191208225101-8983348fd256/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191208231512-a94ff9a2a263 h1:MXmUcvCw8tQjwHnCCL0nIr9rMgqOcVUMIOdc98NY7tM=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191208231512-a94ff9a2a263/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
 github.com/apparentlymart/go-cidr v1.0.1 h1:NmIwLZ/KdsjIUlhf+/Np40atNXm/+lZ5txfTJ/SpF+U=
 github.com/apparentlymart/go-cidr v1.0.1/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/apparentlymart/go-dump v0.0.0-20180507223929-23540a00eaa3/go.mod h1:oL81AME2rN47vu18xqj1S1jPIPuN7afo62yKTNn3XMM=
