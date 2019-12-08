@@ -45,7 +45,7 @@ func ResourceFunctionS3() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"function": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -53,22 +53,22 @@ func ResourceFunctionS3() *schema.Resource {
 						"filename": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"s3_bucket", "s3_key", "s3_object_version"},
+							ConflictsWith: []string{"function.0.s3_bucket", "function.0.s3_key", "function.0.s3_object_version"},
 						},
 						"s3_bucket": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"s3_key": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"s3_object_version": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"description": {
 							Type:     schema.TypeString,
@@ -154,25 +154,12 @@ func ResourceFunctionS3() *schema.Resource {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"qualified_arn": {}, //ToDo
-						"invoke_arn":    {}, //ToDo
-						// "role": {
-						// },
-						// "layers": {
-						// 	Type:     schema.TypeList,
-						// 	Optional: true,
-						// 	MaxItems: 5,
-						// 	Elem: &schema.Schema{
-						// 		Type:         schema.TypeString,
-						// 		ValidateFunc: validateArn,
-						// 	},
-						// },
 					},
 				},
 			},
 			"event": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -222,12 +209,15 @@ func ResourceFunctionS3() *schema.Resource {
 			},
 			"role": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Optional: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"additional_policy": {},
+						"id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 					},
 				},
 			},

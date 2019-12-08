@@ -34,7 +34,7 @@ func ResourceFunctionHTTP() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"function": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -42,22 +42,22 @@ func ResourceFunctionHTTP() *schema.Resource {
 						"filename": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"s3_bucket", "s3_key", "s3_object_version"},
+							ConflictsWith: []string{"function.0.s3_bucket", "function.0.s3_key", "function.0.s3_object_version"},
 						},
 						"s3_bucket": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"s3_key": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"s3_object_version": {
 							Type:          schema.TypeString,
 							Optional:      true,
-							ConflictsWith: []string{"filename"},
+							ConflictsWith: []string{"function.0.filename"},
 						},
 						"description": {
 							Type:     schema.TypeString,
@@ -143,25 +143,12 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"qualified_arn": {}, //ToDo
-						"invoke_arn":    {}, //ToDo
-						// "role": {
-						// },
-						// "layers": {
-						// 	Type:     schema.TypeList,
-						// 	Optional: true,
-						// 	MaxItems: 5,
-						// 	Elem: &schema.Schema{
-						// 		Type:         schema.TypeString,
-						// 		ValidateFunc: validateArn,
-						// 	},
-						// },
 					},
 				},
 			},
 			"event": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -181,15 +168,15 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
-						"apiId": {
+						"api_id": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"apiName": {
+						"api_name": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"executionRole": {
+						"execution_role": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
@@ -210,12 +197,15 @@ func ResourceFunctionHTTP() *schema.Resource {
 			},
 			"role": {
 				Type:     schema.TypeList,
-				Optional: false,
+				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"additional_policy": {},
+						"id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 					},
 				},
 			},
@@ -348,7 +338,7 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 			Path:     aws.String(event["path"].(string)),
 			Method:   aws.String(event["method"].(string)),
 			Existing: event["existing"].(bool),
-			ApiId:    aws.String(event["apiId"].(string)),
+			ApiId:    aws.String(event["api_id"].(string)),
 		},
 	}
 
