@@ -7,35 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 
 	"errors"
+	"log"
 
 	"github.com/alessandromr/go-aws-serverless/services/function"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	"log"
 )
-
-var validLambdaRuntimes = []string{
-	lambda.RuntimeDotnetcore10,
-	lambda.RuntimeDotnetcore20,
-	lambda.RuntimeDotnetcore21,
-	lambda.RuntimeGo1X,
-	lambda.RuntimeJava8,
-	lambda.RuntimeJava11,
-	// lambda.RuntimeNodejs43, EOL
-	// lambda.RuntimeNodejs43Edge, EOL
-	// lambda.RuntimeNodejs610, EOL
-	lambda.RuntimeNodejs810,
-	lambda.RuntimeNodejs10X,
-	lambda.RuntimeNodejs12X,
-	lambda.RuntimeProvided,
-	lambda.RuntimePython27,
-	lambda.RuntimePython36,
-	lambda.RuntimePython37,
-	lambda.RuntimePython38,
-	lambda.RuntimeRuby25,
-}
 
 var validHTTPMethod = []string{
 	"GET",
@@ -45,12 +24,12 @@ var validHTTPMethod = []string{
 	"OPTION",
 }
 
-func ResourceFunction() *schema.Resource {
+func ResourceFunctionHTTP() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceFunctionCreate,
-		Read:   resourceFunctionRead,
-		Update: resourceFunctionUpdate,
-		Delete: resourceFunctionDelete,
+		Create: resourceFunctionHTTPCreate,
+		Read:   resourceFunctionHTTPRead,
+		Update: resourceFunctionHTTPUpdate,
+		Delete: resourceFunctionHTTPDelete,
 
 		Schema: map[string]*schema.Schema{
 			"function": {
@@ -244,7 +223,7 @@ func ResourceFunction() *schema.Resource {
 	}
 }
 
-func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 	functionName := d.Get("function_name").(string)
 	// reservedConcurrentExecutions := d.Get("reserved_concurrent_executions").(int)
 	log.Printf("[DEBUG] Creating Serverless AWS Function %s", functionName)
@@ -400,32 +379,32 @@ func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
 		return nil
 	})
 
-	// if err != nil {
-	// 	if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-	// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-	// 	}
-	// 	// Allow additional time for slower uploads or EC2 throttling
-	// 	err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-	// 		_, err := conn.CreateFunction(params)
-	// 		if err != nil {
-	// 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
+	if err != nil {
+		// 	if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
+		// 	}
+		// 	// Allow additional time for slower uploads or EC2 throttling
+		// 	err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		// 		_, err := conn.CreateFunction(params)
+		// 		if err != nil {
+		// 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
 
-	// 			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-	// 				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-	// 				return resource.RetryableError(err)
-	// 			}
+		// 			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+		// 				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
+		// 				return resource.RetryableError(err)
+		// 			}
 
-	// 			return resource.NonRetryableError(err)
-	// 		}
-	// 		return nil
-	// 	})
-	// 	if isResourceTimeoutError(err) {
-	// 		_, err = conn.CreateFunction(params)
-	// 	}
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-	// 	}
-	// }
+		// 			return resource.NonRetryableError(err)
+		// 		}
+		// 		return nil
+		// 	})
+		// 	if isResourceTimeoutError(err) {
+		// 		_, err = conn.CreateFunction(params)
+		// 	}
+		// 	if err != nil {
+		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
+		// 	}
+	}
 
 	d.SetId(d.Get("function_name").(string))
 
@@ -433,18 +412,18 @@ func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
 	// 	return fmt.Errorf("error waiting for Lambda Function (%s) creation: %s", d.Id(), err)
 	// }
 
-	return resourceAwsLambdaFunctionRead(d, meta)
+	return resourceFunctionHTTPRead(d, m)
 
 }
 
-func resourceFunctionRead(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionHTTPRead(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func resourceFunctionUpdate(d *schema.ResourceData, m interface{}) error {
-	return resourceFunctionRead(d, m)
+func resourceFunctionHTTPUpdate(d *schema.ResourceData, m interface{}) error {
+	return resourceFunctionHTTPRead(d, m)
 }
 
-func resourceFunctionDelete(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionHTTPDelete(d *schema.ResourceData, m interface{}) error {
 	return nil
 }

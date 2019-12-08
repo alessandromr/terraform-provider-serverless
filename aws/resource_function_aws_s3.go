@@ -1,34 +1,21 @@
 package aws
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+
+	"errors"
 	"github.com/alessandromr/go-aws-serverless/services/function"
 	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"log"
 )
 
 const awsMutexLambdaKey = `aws_lambda_function`
-
-var validLambdaRuntimes = []string{
-	lambda.RuntimeDotnetcore10,
-	lambda.RuntimeDotnetcore20,
-	lambda.RuntimeDotnetcore21,
-	lambda.RuntimeGo1X,
-	lambda.RuntimeJava8,
-	lambda.RuntimeJava11,
-	// lambda.RuntimeNodejs43, EOL
-	// lambda.RuntimeNodejs43Edge, EOL
-	// lambda.RuntimeNodejs610, EOL
-	lambda.RuntimeNodejs810,
-	lambda.RuntimeNodejs10X,
-	lambda.RuntimeNodejs12X,
-	lambda.RuntimeProvided,
-	lambda.RuntimePython27,
-	lambda.RuntimePython36,
-	lambda.RuntimePython37,
-	lambda.RuntimePython38,
-	lambda.RuntimeRuby25,
-}
 
 var validS3Events = []string{
 	"s3:ObjectCreated:*",
@@ -48,12 +35,12 @@ var validS3Events = []string{
 	"s3:Replication:OperationNotTracked",
 }
 
-func ResourceFunction() *schema.Resource {
+func ResourceFunctionS3() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceFunctionCreate,
-		Read:   resourceFunctionRead,
-		Update: resourceFunctionUpdate,
-		Delete: resourceFunctionDelete,
+		Create: resourceFunctionS3Create,
+		Read:   resourceFunctionS3Read,
+		Update: resourceFunctionS3Update,
+		Delete: resourceFunctionS3Delete,
 
 		Schema: map[string]*schema.Schema{
 			"function": {
@@ -189,44 +176,47 @@ func ResourceFunction() *schema.Resource {
 				MinItems: 1,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					"bucket": {
-						Type:     schema.TypeString,
-						Required: true,
-					},
-					"event_types": {
-						Type:     schema.TypeList,
-						Required: true,
-						MinItems: 1,
-						MaxItems: 10,
-						Elem: &schema.Schema{
-							Type:         schema.TypeString,
-							ValidateFunc: validation.StringInSlice(validS3Events, false),
+					Schema: map[string]*schema.Schema{
+
+						"bucket": {
+							Type:     schema.TypeString,
+							Required: true,
 						},
-					},
-					"event_key": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"object_prefix": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"object_suffix": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"bucket_domain_name": {
-						Type:     schema.TypeString,
-						Computed: true,
-					},
-					"bucket_regional_domain_name": {
-						Type:     schema.TypeString,
-						Computed: true,
-					},
-					"arn": {
-						Type:     schema.TypeString,
-						Optional: true,
-						Computed: true,
+						"event_types": {
+							Type:     schema.TypeList,
+							Required: true,
+							MinItems: 1,
+							MaxItems: 10,
+							Elem: &schema.Schema{
+								Type:         schema.TypeString,
+								ValidateFunc: validation.StringInSlice(validS3Events, false),
+							},
+						},
+						"event_key": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"object_prefix": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"object_suffix": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"bucket_domain_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"bucket_regional_domain_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"arn": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
 					},
 				},
 			},
@@ -245,7 +235,7 @@ func ResourceFunction() *schema.Resource {
 	}
 }
 
-func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 	functionName := d.Get("function_name").(string)
 	// reservedConcurrentExecutions := d.Get("reserved_concurrent_executions").(int)
 	log.Printf("[DEBUG] Creating Serverless AWS Function %s", functionName)
@@ -370,7 +360,7 @@ func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
 			Bucket: aws.String(event["bucket"].(string)),
 			Prefix: aws.String(event["prefix"].(string)),
 			Suffix: aws.String(event["suffix"].(string)),
-			Types:  aws.StringInSlice(event["types"].([]string)),
+			Types:  aws.StringSlice(event["types"].([]string)),
 			Key:    aws.String(event["key"].(string)),
 		},
 	}
@@ -402,32 +392,32 @@ func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
 		return nil
 	})
 
-	// if err != nil {
-	// 	if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-	// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-	// 	}
-	// 	// Allow additional time for slower uploads or EC2 throttling
-	// 	err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-	// 		_, err := conn.CreateFunction(params)
-	// 		if err != nil {
-	// 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
+	if err != nil {
+		// 	if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
+		// 	}
+		// 	// Allow additional time for slower uploads or EC2 throttling
+		// 	err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		// 		_, err := conn.CreateFunction(params)
+		// 		if err != nil {
+		// 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
 
-	// 			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-	// 				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-	// 				return resource.RetryableError(err)
-	// 			}
+		// 			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+		// 				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
+		// 				return resource.RetryableError(err)
+		// 			}
 
-	// 			return resource.NonRetryableError(err)
-	// 		}
-	// 		return nil
-	// 	})
-	// 	if isResourceTimeoutError(err) {
-	// 		_, err = conn.CreateFunction(params)
-	// 	}
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-	// 	}
-	// }
+		// 			return resource.NonRetryableError(err)
+		// 		}
+		// 		return nil
+		// 	})
+		// 	if isResourceTimeoutError(err) {
+		// 		_, err = conn.CreateFunction(params)
+		// 	}
+		// 	if err != nil {
+		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
+		// 	}
+	}
 
 	d.SetId(d.Get("function_name").(string))
 
@@ -435,18 +425,18 @@ func resourceFunctionCreate(d *schema.ResourceData, m interface{}) error {
 	// 	return fmt.Errorf("error waiting for Lambda Function (%s) creation: %s", d.Id(), err)
 	// }
 
-	return resourceAwsLambdaFunctionRead(d, meta)
+	return resourceFunctionS3Read(d, m)
 
 }
 
-func resourceFunctionRead(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func resourceFunctionUpdate(d *schema.ResourceData, m interface{}) error {
-	return resourceFunctionRead(d, m)
+func resourceFunctionS3Update(d *schema.ResourceData, m interface{}) error {
+	return resourceFunctionS3Read(d, m)
 }
 
-func resourceFunctionDelete(d *schema.ResourceData, m interface{}) error {
+func resourceFunctionS3Delete(d *schema.ResourceData, m interface{}) error {
 	return nil
 }

@@ -8,7 +8,8 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		ResourcesMap: map[string]*schema.Resource{
-			"serverless_aws_function": aws.ResourceFunction(),
+			"serverless_aws_function_s3":   aws.ResourceFunctionS3(),
+			"serverless_aws_function_http": aws.ResourceFunctionHTTP(),
 		},
 	}
 }
