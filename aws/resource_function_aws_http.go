@@ -10,6 +10,7 @@ import (
 	"log"
 
 	"github.com/alessandromr/go-aws-serverless/services/function"
+	"github.com/alessandromr/go-aws-serverless/utils/auth"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -136,6 +137,15 @@ func ResourceFunctionHTTP() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			"publish": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default: false,
+			},
+			"role": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"event": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -143,7 +153,6 @@ func ResourceFunctionHTTP() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-
 						"path": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -185,28 +194,17 @@ func ResourceFunctionHTTP() *schema.Resource {
 					},
 				},
 			},
-			"role": {
-				Type:     schema.TypeList,
-				Required: true,
-				MinItems: 1,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-					},
-				},
-			},
 		},
 	}
 }
 
 func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
 	functionName := d.Get("function_name").(string)
+	iamRole := d.Get("role").(string)
 	// reservedConcurrentExecutions := d.Get("reserved_concurrent_executions").(int)
-	log.Printf("[DEBUG] Creating Serverless AWS Function %s", functionName)
+	log.Printf("[DEBUG] Creating Serverless AWS Function %s with role %s", functionName, iamRole)
 
 	filename, hasFilename := d.GetOk("filename")
 	s3Bucket, bucketOk := d.GetOk("s3_bucket")
@@ -250,7 +248,7 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 		FunctionName: aws.String(functionName),
 		Handler:      aws.String(d.Get("handler").(string)),
 		MemorySize:   aws.Int64(int64(d.Get("memory_size").(int))),
-		// Role:         aws.String(iamRole),
+		Role:         aws.String(iamRole),
 		Runtime: aws.String(d.Get("runtime").(string)),
 		Timeout: aws.Int64(int64(d.Get("timeout").(int))),
 		Publish: aws.Bool(d.Get("publish").(bool)),
@@ -326,8 +324,8 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 		FunctionInput: funcParam,
 		HTTPCreateEvent: function.HTTPCreateEvent{
 			Path:     aws.String(event["path"].(string)),
-			Method:   aws.String(event["method"].(string)),
-			Existing: event["existing"].(bool),
+			Method:   aws.String(event["http_method"].(string)),
+			Existing: event["already_existing"].(bool),
 			ApiId:    aws.String(event["api_id"].(string)),
 		},
 	}

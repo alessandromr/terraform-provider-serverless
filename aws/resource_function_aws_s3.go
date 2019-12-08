@@ -8,6 +8,7 @@ import (
 
 	"errors"
 	"github.com/alessandromr/go-aws-serverless/services/function"
+	"github.com/alessandromr/go-aws-serverless/utils/auth"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -147,6 +148,15 @@ func ResourceFunctionS3() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			"publish": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default: false,
+			},
+			"role": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"event": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -154,20 +164,18 @@ func ResourceFunctionS3() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-
 						"bucket": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 						"event_types": {
-							Type:     schema.TypeList,
+							Type:     schema.TypeSet,
 							Required: true,
-							MinItems: 1,
-							MaxItems: 10,
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
 								ValidateFunc: validation.StringInSlice(validS3Events, false),
 							},
+							Set: schema.HashString,
 						},
 						"event_key": {
 							Type:     schema.TypeString,
@@ -197,58 +205,33 @@ func ResourceFunctionS3() *schema.Resource {
 					},
 				},
 			},
-			"role": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MinItems: 1,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-					},
-				},
-			},
 		},
 	}
 }
 
 func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
 	functionName := d.Get("function_name").(string)
+	iamRole := d.Get("role").(string)
 	// reservedConcurrentExecutions := d.Get("reserved_concurrent_executions").(int)
-	log.Printf("[DEBUG] Creating Serverless AWS Function %s", functionName)
+	log.Printf("[DEBUG] Creating Serverless AWS Function %s with role %s", functionName, iamRole)
 
 	filename, hasFilename := d.GetOk("filename")
 	s3Bucket, bucketOk := d.GetOk("s3_bucket")
 	s3Key, keyOk := d.GetOk("s3_key")
 	s3ObjectVersion, versionOk := d.GetOk("s3_object_version")
 
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-	log.Printf("OK 0")
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-
 	if !hasFilename && !bucketOk && !keyOk && !versionOk {
 		return errors.New("filename or s3_* attributes must be set")
 	}
-
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-	log.Printf("OK 1")
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 	var functionCode *lambda.FunctionCode
 	if hasFilename {
 		// Grab an exclusive lock so that we're only reading one function into
 		// memory at a time.
 		// See https://github.com/hashicorp/terraform/issues/9364
-		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-		log.Printf("OK 1.1")
-		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 		awsMutexKV.Lock(awsMutexLambdaKey)
-		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-		log.Printf("OK 1.2")
-		log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 		defer awsMutexKV.Unlock(awsMutexLambdaKey)
 		file, err := loadFileContent(filename.(string))
 		if err != nil {
@@ -270,22 +253,18 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 		}
 	}
 
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-	log.Printf("OK 2")
-	log.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-
 	funcParam := &lambda.CreateFunctionInput{
 		Code:         functionCode,
 		Description:  aws.String(d.Get("description").(string)),
 		FunctionName: aws.String(functionName),
 		Handler:      aws.String(d.Get("handler").(string)),
 		MemorySize:   aws.Int64(int64(d.Get("memory_size").(int))),
-		// Role:         aws.String(iamRole),
+		Role:         aws.String(iamRole),
 		Runtime: aws.String(d.Get("runtime").(string)),
 		Timeout: aws.Int64(int64(d.Get("timeout").(int))),
 		Publish: aws.Bool(d.Get("publish").(bool)),
 	}
-
+	
 	if v, ok := d.GetOk("layers"); ok && len(v.([]interface{})) > 0 {
 		funcParam.Layers = expandStringList(v.([]interface{}))
 	}
@@ -351,20 +330,21 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 	// 	SecurityGroupIds: expandStringSet(config["security_group_ids"].(*schema.Set)),
 	// 	SubnetIds:        expandStringSet(config["subnet_ids"].(*schema.Set)),
 	// }
-
+	
 	input := function.S3CreateFunctionInput{
 		FunctionInput: funcParam,
 		S3CreateEvent: function.S3CreateEvent{
 			Bucket: aws.String(event["bucket"].(string)),
-			Prefix: aws.String(event["prefix"].(string)),
-			Suffix: aws.String(event["suffix"].(string)),
-			Types:  aws.StringSlice(event["types"].([]string)),
-			Key:    aws.String(event["key"].(string)),
+			Prefix: aws.String(event["object_prefix"].(string)),
+			Suffix: aws.String(event["object_suffix"].(string)),
+			Types:  expandStringSet(event["event_types"].(*schema.Set)),
+			Key:    aws.String(event["event_key"].(string)),
 		},
 	}
-
+	
 	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
 		_, err := function.CreateFunction(input)
+		log.Println(err)//ToDo
 
 		if err != nil {
 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
