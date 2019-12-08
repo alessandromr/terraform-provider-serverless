@@ -198,9 +198,8 @@ func ResourceFunctionS3() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"arn": {
+						"statement_id": {
 							Type:     schema.TypeString,
-							Optional: true,
 							Computed: true,
 						},
 					},
@@ -406,7 +405,6 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
 
-	
 	event := d.Get("event").([]interface{})[0].(map[string]interface{})
 
 	input := function.S3ReadFunctionInput{
@@ -415,7 +413,7 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 		},
 		S3ReadEvent: function.S3ReadEvent{
 			Bucket: aws.String(event["bucket"].(string)),
-			// StatementId *string
+			// StatementId: aws.String(event["statement_id"].(string)),
 		},
 	}
 
@@ -459,21 +457,19 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 	// TODO error checking / handling on the Set() calls.
 
 	d.Set("arn", functionOutput["FunctionArn"])
-	// d.Set("role", functionOutput["FunctionRole"])
-	// d.Set("memory_size", functionOutput["MemorySize"])
-	// d.Set("runtime", functionOutput["runtime"])
-	// d.Set("handler", functionOutput["Handler"])
+	d.Set("role", functionOutput["Role"])
+	d.Set("memory_size", functionOutput["MemorySize"])
+	d.Set("runtime", functionOutput["Runtime"])
+	d.Set("handler", functionOutput["Handler"])
+	d.Set("description", functionOutput["Description"])
+	d.Set("last_modified", functionOutput["LastModified"])
+	d.Set("timeout", functionOutput["Timeout"])
+	d.Set("source_code_hash", functionOutput["CodeSha256"])
+	d.Set("source_code_size", functionOutput["CodeSize"])
 
 	d.Set("bucket", functionOutput["Bucket"])
-	// d.Set("StatementId", functionOutput["LambdaPermission"])
+	d.Set("statement_id", functionOutput["StatementId"])
 	// d.Set("event_types", functionOutput["S3EventType"])
-
-	// d.Set("description", function.Description)
-	// d.Set("last_modified", function.LastModified)
-	// d.Set("timeout", function.Timeout)
-	// d.Set("kms_key_arn", function.KMSKeyArn)
-	// d.Set("source_code_hash", function.CodeSha256)
-	// d.Set("source_code_size", function.CodeSize)
 
 	// layers := flattenLambdaLayers(function.Layers)
 	// log.Printf("[INFO] Setting Lambda %s Layers %#v from API", d.Id(), layers)
@@ -553,5 +549,27 @@ func resourceFunctionS3Update(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionS3Delete(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	log.Printf("[INFO] Deleting Serverless Function: %s", d.Id())
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.S3DeleteFunctionInput{
+		FunctionInput: &lambda.DeleteFunctionInput{
+			FunctionName: aws.String(d.Get("function_name").(string)),
+		},
+		S3DeleteEvent: function.S3DeleteEvent{
+			Bucket: aws.String(event["bucket"].(string)),
+			// StatementId: aws.String(event["statement_id"].(string)),
+		},
+	}
+
+	function.DeleteFunction(input)
+
+	// err := function.ReadFunction(input)
+	// if err != nil {
+	// 	return fmt.Errorf("Error deleting Serverless Function: %s", err)
+	// }
+
 	return nil
 }
