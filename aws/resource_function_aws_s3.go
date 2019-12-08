@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/alessandromr/go-aws-serverless/services/function"
 	"github.com/alessandromr/go-aws-serverless/utils/auth"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -151,7 +152,7 @@ func ResourceFunctionS3() *schema.Resource {
 			"publish": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default: false,
+				Default:  false,
 			},
 			"role": {
 				Type:     schema.TypeString,
@@ -260,11 +261,11 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 		Handler:      aws.String(d.Get("handler").(string)),
 		MemorySize:   aws.Int64(int64(d.Get("memory_size").(int))),
 		Role:         aws.String(iamRole),
-		Runtime: aws.String(d.Get("runtime").(string)),
-		Timeout: aws.Int64(int64(d.Get("timeout").(int))),
-		Publish: aws.Bool(d.Get("publish").(bool)),
+		Runtime:      aws.String(d.Get("runtime").(string)),
+		Timeout:      aws.Int64(int64(d.Get("timeout").(int))),
+		Publish:      aws.Bool(d.Get("publish").(bool)),
 	}
-	
+
 	if v, ok := d.GetOk("layers"); ok && len(v.([]interface{})) > 0 {
 		funcParam.Layers = expandStringList(v.([]interface{}))
 	}
@@ -272,7 +273,7 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 	if v, ok := d.GetOk("dead_letter_config"); ok {
 		dlcMaps := v.([]interface{})
 		if len(dlcMaps) == 1 { // Schema guarantees either 0 or 1
-			// Prevent panic on nil dead_letter_config. See GH-14961
+			// Prevent panic on nil dead_letter_config.
 			if dlcMaps[0] == nil {
 				return fmt.Errorf("Nil dead_letter_config supplied for function: %s", functionName)
 			}
@@ -326,11 +327,6 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 
 	event := d.Get("event").([]interface{})[0].(map[string]interface{})
 
-	// funcParam.VpcConfig = &lambda.VpcConfig{
-	// 	SecurityGroupIds: expandStringSet(config["security_group_ids"].(*schema.Set)),
-	// 	SubnetIds:        expandStringSet(config["subnet_ids"].(*schema.Set)),
-	// }
-	
 	input := function.S3CreateFunctionInput{
 		FunctionInput: funcParam,
 		S3CreateEvent: function.S3CreateEvent{
@@ -341,10 +337,10 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 			Key:    aws.String(event["event_key"].(string)),
 		},
 	}
-	
+
 	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
 		_, err := function.CreateFunction(input)
-		log.Println(err)//ToDo
+		log.Println(err) //ToDo
 
 		if err != nil {
 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
@@ -408,6 +404,147 @@ func resourceFunctionS3Create(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.S3ReadFunctionInput{
+		FunctionConfigurationInput: &lambda.GetFunctionConfigurationInput{
+			FunctionName: aws.String(d.Get("function_name").(string)),
+		},
+		S3ReadEvent: function.S3ReadEvent{
+			Bucket: aws.String(event["bucket"].(string)),
+			// StatementId *string
+		},
+	}
+
+	// qualifier for lambda function data source
+	// qualifier, qualifierExistance := d.GetOk("qualifier")
+	// if qualifierExistance {
+	// 	params.Qualifier = aws.String(qualifier.(string))
+	// 	log.Printf("[DEBUG] Fetching Lambda Function: %s:%s", d.Id(), qualifier.(string))
+	// } else {
+	// 	log.Printf("[DEBUG] Fetching Lambda Function: %s", d.Id())
+	// }
+
+	functionOutput, err := function.ReadFunction(input)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "ResourceNotFoundException" && !d.IsNewResource() {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+
+	// if getFunctionOutput.Concurrency != nil {
+	// 	d.Set("reserved_concurrent_executions", getFunctionOutput.Concurrency.ReservedConcurrentExecutions)
+	// } else {
+	// 	d.Set("reserved_concurrent_executions", -1)
+	// }
+
+	// Tagging operations are permitted on Lambda functions only.
+	// Tags on aliases and versions are not supported.
+	// if !qualifierExistance {
+	// 	d.Set("tags", tagsToMapGeneric(getFunctionOutput.Tags))
+	// }
+
+	// getFunctionOutput.Code.Location is a pre-signed URL pointing at the zip
+	// file that we uploaded when we created the resource. You can use it to
+	// download the code from AWS. The other part is
+	// getFunctionOutput.Configuration which holds metadata.
+
+	// function := getFunctionOutput.Configuration
+
+	// TODO error checking / handling on the Set() calls.
+
+	d.Set("arn", functionOutput["FunctionArn"])
+	// d.Set("role", functionOutput["FunctionRole"])
+	// d.Set("memory_size", functionOutput["MemorySize"])
+	// d.Set("runtime", functionOutput["runtime"])
+	// d.Set("handler", functionOutput["Handler"])
+
+	d.Set("bucket", functionOutput["Bucket"])
+	// d.Set("StatementId", functionOutput["LambdaPermission"])
+	// d.Set("event_types", functionOutput["S3EventType"])
+
+	// d.Set("description", function.Description)
+	// d.Set("last_modified", function.LastModified)
+	// d.Set("timeout", function.Timeout)
+	// d.Set("kms_key_arn", function.KMSKeyArn)
+	// d.Set("source_code_hash", function.CodeSha256)
+	// d.Set("source_code_size", function.CodeSize)
+
+	// layers := flattenLambdaLayers(function.Layers)
+	// log.Printf("[INFO] Setting Lambda %s Layers %#v from API", d.Id(), layers)
+	// if err := d.Set("layers", layers); err != nil {
+	// 	return fmt.Errorf("Error setting layers for Lambda Function (%s): %s", d.Id(), err)
+	// }
+
+	// config := flattenLambdaVpcConfigResponse(function.VpcConfig)
+	// log.Printf("[INFO] Setting Lambda %s VPC config %#v from API", d.Id(), config)
+	// if err := d.Set("vpc_config", config); err != nil {
+	// 	return fmt.Errorf("Error setting vpc_config for Lambda Function (%s): %s", d.Id(), err)
+	// }
+
+	// environment := flattenLambdaEnvironment(function.Environment)
+	// log.Printf("[INFO] Setting Lambda %s environment %#v from API", d.Id(), environment)
+	// if err := d.Set("environment", environment); err != nil {
+	// 	log.Printf("[ERR] Error setting environment for Lambda Function (%s): %s", d.Id(), err)
+	// }
+
+	// if function.DeadLetterConfig != nil && function.DeadLetterConfig.TargetArn != nil {
+	// 	d.Set("dead_letter_config", []interface{}{
+	// 		map[string]interface{}{
+	// 			"target_arn": *function.DeadLetterConfig.TargetArn,
+	// 		},
+	// 	})
+	// } else {
+	// 	d.Set("dead_letter_config", []interface{}{})
+	// }
+
+	// Assume `PassThrough` on partitions that don't support tracing config
+	// tracingConfigMode := "PassThrough"
+	// if function.TracingConfig != nil {
+	// 	tracingConfigMode = *function.TracingConfig.Mode
+	// }
+	// d.Set("tracing_config", []interface{}{
+	// 	map[string]interface{}{
+	// 		"mode": tracingConfigMode,
+	// 	},
+	// })
+
+	// Get latest version and ARN unless qualifier is specified via data source
+	// if qualifierExistance {
+	// 	d.Set("version", function.Version)
+	// 	d.Set("qualified_arn", function.FunctionArn)
+	// } else {
+
+	// 	// List is sorted from oldest to latest
+	// 	// so this may get costly over time :'(
+	// 	var lastVersion, lastQualifiedArn string
+	// 	err = listVersionsByFunctionPages(conn, &lambda.ListVersionsByFunctionInput{
+	// 		FunctionName: function.FunctionName,
+	// 		MaxItems:     aws.Int64(10000),
+	// 	}, func(p *lambda.ListVersionsByFunctionOutput, lastPage bool) bool {
+	// 		if lastPage {
+	// 			last := p.Versions[len(p.Versions)-1]
+	// 			lastVersion = *last.Version
+	// 			lastQualifiedArn = *last.FunctionArn
+	// 			return false
+	// 		}
+	// 		return true
+	// 	})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	d.Set("version", lastVersion)
+	// 	d.Set("qualified_arn", lastQualifiedArn)
+	// }
+
+	// invokeArn := lambdaFunctionInvokeArn(*function.FunctionArn, meta)
+	// d.Set("invoke_arn", invokeArn)
 	return nil
 }
 

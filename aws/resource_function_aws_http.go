@@ -140,7 +140,7 @@ func ResourceFunctionHTTP() *schema.Resource {
 			"publish": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default: false,
+				Default:  false,
 			},
 			"role": {
 				Type:     schema.TypeString,
@@ -249,9 +249,9 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 		Handler:      aws.String(d.Get("handler").(string)),
 		MemorySize:   aws.Int64(int64(d.Get("memory_size").(int))),
 		Role:         aws.String(iamRole),
-		Runtime: aws.String(d.Get("runtime").(string)),
-		Timeout: aws.Int64(int64(d.Get("timeout").(int))),
-		Publish: aws.Bool(d.Get("publish").(bool)),
+		Runtime:      aws.String(d.Get("runtime").(string)),
+		Timeout:      aws.Int64(int64(d.Get("timeout").(int))),
+		Publish:      aws.Bool(d.Get("publish").(bool)),
 	}
 
 	if v, ok := d.GetOk("layers"); ok && len(v.([]interface{})) > 0 {
