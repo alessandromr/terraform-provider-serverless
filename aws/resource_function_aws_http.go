@@ -11,6 +11,8 @@ import (
 
 	"github.com/alessandromr/go-aws-serverless/services/function"
 	"github.com/alessandromr/go-aws-serverless/utils/auth"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/apigateway"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -184,6 +186,10 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Computed: true,
 						},
 						"root_resource_id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"resource_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
@@ -395,6 +401,48 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionHTTPRead(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.HTTPReadFunctionInput{
+		FunctionConfigurationInput: &lambda.GetFunctionConfigurationInput{
+			FunctionName: aws.String(d.Get("function_name").(string)),
+		},
+		HTTPReadEvent: function.HTTPReadEvent{
+			ApiId:      aws.String(event["api_id"].(string)),
+			ResourceId: aws.String(event["resource_id"].(string)),
+			Method:     aws.String(event["http_method"].(string)),
+		},
+	}
+
+	functionOutput, err := function.ReadFunction(input)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "ResourceNotFoundException" && !d.IsNewResource() {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+
+	d.Set("arn", functionOutput["FunctionArn"])
+	d.Set("role", functionOutput["Role"])
+	d.Set("memory_size", functionOutput["MemorySize"])
+	d.Set("runtime", functionOutput["Runtime"])
+	d.Set("handler", functionOutput["Handler"])
+	d.Set("description", functionOutput["Description"])
+	d.Set("last_modified", functionOutput["LastModified"])
+	d.Set("timeout", functionOutput["Timeout"])
+	d.Set("source_code_hash", functionOutput["CodeSha256"])
+	d.Set("source_code_size", functionOutput["CodeSize"])
+
+	d.Set("event", []interface{}{
+		map[string]interface{}{
+			"api_id":      functionOutput["RestApi"].(apigateway.RestApi).Id,
+			"resource_id": functionOutput["ApiResource"].(apigateway.Resource).Id,
+		},
+	})
+
 	return nil
 }
 
@@ -403,5 +451,21 @@ func resourceFunctionHTTPUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionHTTPDelete(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	log.Printf("[INFO] Deleting Serverless Function: %s", d.Id())
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.HTTPDeleteFunctionInput{
+		FunctionInput: &lambda.DeleteFunctionInput{
+			FunctionName: aws.String(d.Get("function_name").(string)),
+		},
+		HTTPDeleteEvent: function.HTTPDeleteEvent{
+			ApiId:      aws.String(event["api_id"].(string)),
+			ResourceId: aws.String(event["resource_id"].(string)),
+		},
+	}
+
+	function.DeleteFunction(input)
 	return nil
 }
