@@ -164,6 +164,10 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Required:     true,
 							ValidateFunc: validation.StringInSlice(validHTTPMethod, false),
 						},
+						"http_integration_method": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 						"already_existing": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -179,7 +183,7 @@ func ResourceFunctionHTTP() *schema.Resource {
 						},
 						"execution_role": {
 							Type:     schema.TypeString,
-							Computed: true,
+							Required: true,
 						},
 						"arn": {
 							Type:     schema.TypeString,
@@ -260,6 +264,7 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 		Publish:      aws.Bool(d.Get("publish").(bool)),
 	}
 
+
 	if v, ok := d.GetOk("layers"); ok && len(v.([]interface{})) > 0 {
 		funcParam.Layers = expandStringList(v.([]interface{}))
 	}
@@ -321,18 +326,15 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 
 	event := d.Get("event").([]interface{})[0].(map[string]interface{})
 
-	// funcParam.VpcConfig = &lambda.VpcConfig{
-	// 	SecurityGroupIds: expandStringSet(config["security_group_ids"].(*schema.Set)),
-	// 	SubnetIds:        expandStringSet(config["subnet_ids"].(*schema.Set)),
-	// }
-
 	input := function.HTTPCreateFunctionInput{
 		FunctionInput: funcParam,
 		HTTPCreateEvent: function.HTTPCreateEvent{
-			Path:     aws.String(event["path"].(string)),
-			Method:   aws.String(event["http_method"].(string)),
-			Existing: event["already_existing"].(bool),
-			ApiId:    aws.String(event["api_id"].(string)),
+			Path:          aws.String(event["path"].(string)),
+			Method:        aws.String(event["http_method"].(string)),
+			Existing:      event["already_existing"].(bool),
+			ApiId:         aws.String(event["api_id"].(string)),
+			ApiName:       aws.String(event["api_name"].(string)),
+			ExecutionRole: aws.String(event["execution_role"].(string)),
 		},
 	}
 
@@ -438,8 +440,11 @@ func resourceFunctionHTTPRead(d *schema.ResourceData, m interface{}) error {
 
 	d.Set("event", []interface{}{
 		map[string]interface{}{
-			"api_id":      functionOutput["RestApi"].(apigateway.RestApi).Id,
-			"resource_id": functionOutput["ApiResource"].(apigateway.Resource).Id,
+			"api_id":                  functionOutput["RestApi"].(apigateway.RestApi).Id,
+			"resource_id":             functionOutput["ApiResource"].(apigateway.Resource).Id,
+			"http_method":             functionOutput["ApiResource"].(apigateway.Resource).ResourceMethods[event["path"].(string)].HttpMethod,
+			"execution_role":          functionOutput["ApiResource"].(apigateway.Resource).ResourceMethods[event["path"].(string)].MethodIntegration.Credentials,
+			"http_integration_method": functionOutput["ApiResource"].(apigateway.Resource).ResourceMethods[event["path"].(string)].MethodIntegration.HttpMethod,
 		},
 	})
 
