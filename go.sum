@@ -17,6 +17,14 @@ github.com/alessandromr/go-aws-serverless v0.0.0-20191208225101-8983348fd256 h1:
 github.com/alessandromr/go-aws-serverless v0.0.0-20191208225101-8983348fd256/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
 github.com/alessandromr/go-aws-serverless v0.0.0-20191208231512-a94ff9a2a263 h1:MXmUcvCw8tQjwHnCCL0nIr9rMgqOcVUMIOdc98NY7tM=
 github.com/alessandromr/go-aws-serverless v0.0.0-20191208231512-a94ff9a2a263/go.mod h1:xZB8A0LeWzGXbJ+c1pPMaJJpDREsdzQ0yGV3TQn/vwU=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222211814-a78a10d51de5 h1:X4NVgTQfrpR60zI/TwMPr4DR1OhnCYT3AeOd4CaEQrI=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222211814-a78a10d51de5/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222212947-efc0146e6ee9 h1:JFHYr+q8SedasXmsI1EVZhpV5aJZcZwYhybuKWqJFO8=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222212947-efc0146e6ee9/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222220151-572acb316d35 h1:2oFPvWCY3TTyez6P77MN/Q7DZKZxubaSQKl4mVEDlDw=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222220151-572acb316d35/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222220403-1061ff92f9ee h1:c/xwqQzk+30Aw4ETOFBv9/CcoMwZL7S6OrYTfGCsvro=
+github.com/alessandromr/go-aws-serverless v0.0.0-20191222220403-1061ff92f9ee/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
 github.com/apparentlymart/go-cidr v1.0.1 h1:NmIwLZ/KdsjIUlhf+/Np40atNXm/+lZ5txfTJ/SpF+U=
 github.com/apparentlymart/go-cidr v1.0.1/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/apparentlymart/go-dump v0.0.0-20180507223929-23540a00eaa3/go.mod h1:oL81AME2rN47vu18xqj1S1jPIPuN7afo62yKTNn3XMM=
