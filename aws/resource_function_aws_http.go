@@ -20,10 +20,11 @@ import (
 )
 
 var validHTTPMethod = []string{
-	"GET",
+	// "GET",
 	"POST",
 	"PUT",
 	"DELETE",
+	"ANY",
 	"OPTION",
 }
 
@@ -485,7 +486,7 @@ func resourceFunctionHTTPDelete(d *schema.ResourceData, m interface{}) error {
 		HTTPDeleteEvent: function.HTTPDeleteEvent{
 			ApiId:      aws.String(event["api_id"].(string)),
 			ResourceId: aws.String(event["resource_id"].(string)),
-			Method: aws.String(event["http_method"].(string)),
+			Method:     aws.String(event["http_method"].(string)),
 		},
 	}
 
