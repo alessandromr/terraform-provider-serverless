@@ -435,27 +435,6 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	// if getFunctionOutput.Concurrency != nil {
-	// 	d.Set("reserved_concurrent_executions", getFunctionOutput.Concurrency.ReservedConcurrentExecutions)
-	// } else {
-	// 	d.Set("reserved_concurrent_executions", -1)
-	// }
-
-	// Tagging operations are permitted on Lambda functions only.
-	// Tags on aliases and versions are not supported.
-	// if !qualifierExistance {
-	// 	d.Set("tags", tagsToMapGeneric(getFunctionOutput.Tags))
-	// }
-
-	// getFunctionOutput.Code.Location is a pre-signed URL pointing at the zip
-	// file that we uploaded when we created the resource. You can use it to
-	// download the code from AWS. The other part is
-	// getFunctionOutput.Configuration which holds metadata.
-
-	// function := getFunctionOutput.Configuration
-
-	// TODO error checking / handling on the Set() calls.
-
 	d.Set("arn", functionOutput["FunctionArn"])
 	d.Set("role", functionOutput["Role"])
 	d.Set("memory_size", functionOutput["MemorySize"])
@@ -471,80 +450,10 @@ func resourceFunctionS3Read(d *schema.ResourceData, m interface{}) error {
 		map[string]interface{}{
 			"bucket":       functionOutput["Bucket"],
 			"statement_id": functionOutput["StatementId"],
-			"event_types": functionOutput["S3Events"],
+			"event_types":  functionOutput["S3Events"],
 		},
 	})
 
-	// layers := flattenLambdaLayers(function.Layers)
-	// log.Printf("[INFO] Setting Lambda %s Layers %#v from API", d.Id(), layers)
-	// if err := d.Set("layers", layers); err != nil {
-	// 	return fmt.Errorf("Error setting layers for Lambda Function (%s): %s", d.Id(), err)
-	// }
-
-	// config := flattenLambdaVpcConfigResponse(function.VpcConfig)
-	// log.Printf("[INFO] Setting Lambda %s VPC config %#v from API", d.Id(), config)
-	// if err := d.Set("vpc_config", config); err != nil {
-	// 	return fmt.Errorf("Error setting vpc_config for Lambda Function (%s): %s", d.Id(), err)
-	// }
-
-	// environment := flattenLambdaEnvironment(function.Environment)
-	// log.Printf("[INFO] Setting Lambda %s environment %#v from API", d.Id(), environment)
-	// if err := d.Set("environment", environment); err != nil {
-	// 	log.Printf("[ERR] Error setting environment for Lambda Function (%s): %s", d.Id(), err)
-	// }
-
-	// if function.DeadLetterConfig != nil && function.DeadLetterConfig.TargetArn != nil {
-	// 	d.Set("dead_letter_config", []interface{}{
-	// 		map[string]interface{}{
-	// 			"target_arn": *function.DeadLetterConfig.TargetArn,
-	// 		},
-	// 	})
-	// } else {
-	// 	d.Set("dead_letter_config", []interface{}{})
-	// }
-
-	// Assume `PassThrough` on partitions that don't support tracing config
-	// tracingConfigMode := "PassThrough"
-	// if function.TracingConfig != nil {
-	// 	tracingConfigMode = *function.TracingConfig.Mode
-	// }
-	// d.Set("tracing_config", []interface{}{
-	// 	map[string]interface{}{
-	// 		"mode": tracingConfigMode,
-	// 	},
-	// })
-
-	// Get latest version and ARN unless qualifier is specified via data source
-	// if qualifierExistance {
-	// 	d.Set("version", function.Version)
-	// 	d.Set("qualified_arn", function.FunctionArn)
-	// } else {
-
-	// 	// List is sorted from oldest to latest
-	// 	// so this may get costly over time :'(
-	// 	var lastVersion, lastQualifiedArn string
-	// 	err = listVersionsByFunctionPages(conn, &lambda.ListVersionsByFunctionInput{
-	// 		FunctionName: function.FunctionName,
-	// 		MaxItems:     aws.Int64(10000),
-	// 	}, func(p *lambda.ListVersionsByFunctionOutput, lastPage bool) bool {
-	// 		if lastPage {
-	// 			last := p.Versions[len(p.Versions)-1]
-	// 			lastVersion = *last.Version
-	// 			lastQualifiedArn = *last.FunctionArn
-	// 			return false
-	// 		}
-	// 		return true
-	// 	})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	d.Set("version", lastVersion)
-	// 	d.Set("qualified_arn", lastQualifiedArn)
-	// }
-
-	// invokeArn := lambdaFunctionInvokeArn(*function.FunctionArn, meta)
-	// d.Set("invoke_arn", invokeArn)
 	return nil
 }
 

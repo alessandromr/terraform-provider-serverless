@@ -11,6 +11,8 @@ import (
 
 	"github.com/alessandromr/go-aws-serverless/services/function"
 	"github.com/alessandromr/go-aws-serverless/utils/auth"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/apigateway"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -18,10 +20,11 @@ import (
 )
 
 var validHTTPMethod = []string{
-	"GET",
+	// "GET",
 	"POST",
 	"PUT",
 	"DELETE",
+	"ANY",
 	"OPTION",
 }
 
@@ -162,6 +165,10 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Required:     true,
 							ValidateFunc: validation.StringInSlice(validHTTPMethod, false),
 						},
+						"http_integration_method": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 						"already_existing": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -177,13 +184,17 @@ func ResourceFunctionHTTP() *schema.Resource {
 						},
 						"execution_role": {
 							Type:     schema.TypeString,
-							Computed: true,
+							Required: true,
 						},
 						"arn": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
 						"root_resource_id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"resource_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
@@ -200,6 +211,7 @@ func ResourceFunctionHTTP() *schema.Resource {
 
 func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+	var err error
 
 	functionName := d.Get("function_name").(string)
 	iamRole := d.Get("role").(string)
@@ -315,76 +327,82 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 
 	event := d.Get("event").([]interface{})[0].(map[string]interface{})
 
-	// funcParam.VpcConfig = &lambda.VpcConfig{
-	// 	SecurityGroupIds: expandStringSet(config["security_group_ids"].(*schema.Set)),
-	// 	SubnetIds:        expandStringSet(config["subnet_ids"].(*schema.Set)),
-	// }
-
 	input := function.HTTPCreateFunctionInput{
 		FunctionInput: funcParam,
 		HTTPCreateEvent: function.HTTPCreateEvent{
-			Path:     aws.String(event["path"].(string)),
-			Method:   aws.String(event["http_method"].(string)),
-			Existing: event["already_existing"].(bool),
-			ApiId:    aws.String(event["api_id"].(string)),
+			Path:          aws.String(event["path"].(string)),
+			Method:        aws.String(event["http_method"].(string)),
+			Existing:      event["already_existing"].(bool),
+			ApiId:         aws.String(event["api_id"].(string)),
+			ApiName:       aws.String(event["api_name"].(string)),
+			ExecutionRole: aws.String(event["execution_role"].(string)),
 		},
 	}
+	var response map[string]interface{}
 
-	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
-		_, err := function.CreateFunction(input)
+	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+		var intErr error
+		response, intErr = function.CreateFunction(input)
 
-		if err != nil {
+		if intErr != nil {
 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
 
-			if isAWSErr(err, "InvalidParameterValueException", "The role defined for the function cannot be assumed by Lambda") {
-				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-				return resource.RetryableError(err)
+			if isAWSErr(intErr, "InvalidParameterValueException", "The role defined for the function cannot be assumed by Lambda") {
+				log.Printf("[DEBUG] Received %s, retrying CreateFunction", intErr)
+				return resource.RetryableError(intErr)
 			}
-			if isAWSErr(err, "InvalidParameterValueException", "The provided execution role does not have permissions") {
-				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-				return resource.RetryableError(err)
+			if isAWSErr(intErr, "InvalidParameterValueException", "The provided execution role does not have permissions") {
+				log.Printf("[DEBUG] Received %s, retrying CreateFunction", intErr)
+				return resource.RetryableError(intErr)
 			}
-			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-				return resource.RetryableError(err)
+			if isAWSErr(intErr, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+				log.Printf("[DEBUG] Received %s, retrying CreateFunction", intErr)
+				return resource.RetryableError(intErr)
 			}
-			if isAWSErr(err, "InvalidParameterValueException", "Lambda was unable to configure access to your environment variables because the KMS key is invalid for CreateGrant") {
-				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-				return resource.RetryableError(err)
+			if isAWSErr(intErr, "InvalidParameterValueException", "Lambda was unable to configure access to your environment variables because the KMS key is invalid for CreateGrant") {
+				log.Printf("[DEBUG] Received %s, retrying CreateFunction", intErr)
+				return resource.RetryableError(intErr)
 			}
-			return resource.NonRetryableError(err)
+			return resource.NonRetryableError(intErr)
 		}
 		return nil
 	})
 
 	if err != nil {
-		// 	if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-		// 	}
-		// 	// Allow additional time for slower uploads or EC2 throttling
-		// 	err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		// 		_, err := conn.CreateFunction(params)
-		// 		if err != nil {
-		// 			log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
+		if !isResourceTimeoutError(err) && !isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+			return fmt.Errorf("Error creating Lambda function: %s", err)
+		}
+		// Allow additional time for slower uploads or EC2 throttling
+		err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			response, err = function.CreateFunction(input)
+			if err != nil {
+				log.Printf("[DEBUG] Error creating Lambda Function: %s", err)
 
-		// 			if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
-		// 				log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
-		// 				return resource.RetryableError(err)
-		// 			}
-
-		// 			return resource.NonRetryableError(err)
-		// 		}
-		// 		return nil
-		// 	})
-		// 	if isResourceTimeoutError(err) {
-		// 		_, err = conn.CreateFunction(params)
-		// 	}
-		// 	if err != nil {
-		// 		return fmt.Errorf("Error creating Lambda function: %s", err)
-		// 	}
+				if isAWSErr(err, "InvalidParameterValueException", "Your request has been throttled by EC2") {
+					log.Printf("[DEBUG] Received %s, retrying CreateFunction", err)
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		if isResourceTimeoutError(err) {
+			response, err = function.CreateFunction(input)
+		}
+		if err != nil {
+			return fmt.Errorf("Error creating Lambda function: %s", err)
+		}
 	}
 
 	d.SetId(d.Get("function_name").(string))
+	d.Set("arn", response["FunctionArn"])
+	d.Set("event", []interface{}{
+		map[string]interface{}{
+			"api_id":      response["RestApiId"],
+			"resource_id": response["ResourceId"],
+			"http_method": response["Method"],
+		},
+	})
 
 	// if err := waitForLambdaFunctionCreation(conn, d.Id(), d.Timeout(schema.TimeoutCreate)); err != nil {
 	// 	return fmt.Errorf("error waiting for Lambda Function (%s) creation: %s", d.Id(), err)
@@ -395,6 +413,59 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionHTTPRead(d *schema.ResourceData, m interface{}) error {
+	log.Printf("[DEBUG] Reading Serverless AWS Function")
+
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.HTTPReadFunctionInput{
+		FunctionConfigurationInput: &lambda.GetFunctionConfigurationInput{
+			FunctionName: aws.String(d.Get("arn").(string)),
+		},
+		HTTPReadEvent: function.HTTPReadEvent{
+			ApiId:      aws.String(event["api_id"].(string)),
+			ResourceId: aws.String(event["resource_id"].(string)),
+			Method:     aws.String(event["http_method"].(string)),
+		},
+	}
+
+	functionOutput, err := function.ReadFunction(input)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "ResourceNotFoundException" && !d.IsNewResource() {
+			log.Println("ERROR ", err)
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+
+	d.Set("function_name", functionOutput["FunctionName"])
+	d.Set("role", functionOutput["Role"])
+	d.Set("memory_size", functionOutput["MemorySize"])
+	d.Set("runtime", functionOutput["Runtime"])
+	d.Set("handler", functionOutput["Handler"])
+	d.Set("description", functionOutput["Description"])
+	d.Set("last_modified", functionOutput["LastModified"])
+	d.Set("timeout", functionOutput["Timeout"])
+	d.Set("source_code_hash", functionOutput["CodeSha256"])
+	d.Set("source_code_size", functionOutput["CodeSize"])
+
+	log.Println(*functionOutput["RestApi"].(apigateway.RestApi).Id)
+	log.Println(d.Get("event"))
+
+	d.Set("event", []interface{}{
+		map[string]interface{}{
+			"api_id":                  event["api_id"].(string),
+			"resource_id":             event["resource_id"].(string),
+			"http_method":             event["http_method"].(string),
+			"api_name":                functionOutput["RestApi"].(apigateway.RestApi).Name,
+			"path":                    functionOutput["ApiResource"].(apigateway.Resource).PathPart,
+			"execution_role":          functionOutput["ApiIntegration"].(apigateway.Integration).Credentials,
+			"http_integration_method": functionOutput["ApiIntegration"].(apigateway.Integration).HttpMethod,
+		},
+	})
+
 	return nil
 }
 
@@ -403,5 +474,22 @@ func resourceFunctionHTTPUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceFunctionHTTPDelete(d *schema.ResourceData, m interface{}) error {
+	auth.StartSessionWithShared("eu-west-1", "default") //ToDo
+
+	log.Printf("[INFO] Deleting Serverless Function: %s", d.Id())
+	event := d.Get("event").([]interface{})[0].(map[string]interface{})
+
+	input := function.HTTPDeleteFunctionInput{
+		FunctionInput: &lambda.DeleteFunctionInput{
+			FunctionName: aws.String(d.Get("function_name").(string)),
+		},
+		HTTPDeleteEvent: function.HTTPDeleteEvent{
+			ApiId:      aws.String(event["api_id"].(string)),
+			ResourceId: aws.String(event["resource_id"].(string)),
+			Method:     aws.String(event["http_method"].(string)),
+		},
+	}
+
+	function.DeleteFunction(input)
 	return nil
 }
