@@ -182,10 +182,6 @@ func ResourceFunctionHTTP() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"execution_role": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
 						"arn": {
 							Type:     schema.TypeString,
 							Computed: true,
@@ -330,12 +326,11 @@ func resourceFunctionHTTPCreate(d *schema.ResourceData, m interface{}) error {
 	input := function.HTTPCreateFunctionInput{
 		FunctionInput: funcParam,
 		HTTPCreateEvent: function.HTTPCreateEvent{
-			Path:          aws.String(event["path"].(string)),
-			Method:        aws.String(event["http_method"].(string)),
-			Existing:      event["already_existing"].(bool),
-			ApiId:         aws.String(event["api_id"].(string)),
-			ApiName:       aws.String(event["api_name"].(string)),
-			ExecutionRole: aws.String(event["execution_role"].(string)),
+			Path:     aws.String(event["path"].(string)),
+			Method:   aws.String(event["http_method"].(string)),
+			Existing: event["already_existing"].(bool),
+			ApiId:    aws.String(event["api_id"].(string)),
+			ApiName:  aws.String(event["api_name"].(string)),
 		},
 	}
 	var response map[string]interface{}
@@ -461,7 +456,6 @@ func resourceFunctionHTTPRead(d *schema.ResourceData, m interface{}) error {
 			"http_method":             event["http_method"].(string),
 			"api_name":                functionOutput["RestApi"].(apigateway.RestApi).Name,
 			"path":                    functionOutput["ApiResource"].(apigateway.Resource).PathPart,
-			"execution_role":          functionOutput["ApiIntegration"].(apigateway.Integration).Credentials,
 			"http_integration_method": functionOutput["ApiIntegration"].(apigateway.Integration).HttpMethod,
 		},
 	})

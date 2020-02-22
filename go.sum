@@ -27,6 +27,16 @@ github.com/alessandromr/go-aws-serverless v0.0.0-20191222220403-1061ff92f9ee h1:
 github.com/alessandromr/go-aws-serverless v0.0.0-20191222220403-1061ff92f9ee/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
 github.com/alessandromr/go-aws-serverless v0.0.0-20191222231053-b03ce45befe4 h1:P4u9mvCFk6jpI7k81KFLVYW81acPXifUUo3HzpNfExc=
 github.com/alessandromr/go-aws-serverless v0.0.0-20191222231053-b03ce45befe4/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222182119-3b96b56069e4 h1:eis7eHbbJHDMAEDKheN4iUAWMjqRnVipamcTjnQS7hU=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222182119-3b96b56069e4/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222184355-c68102f1d601 h1:JQjnoGSBRUJO810WcSoYsvlXJ7H9rloMkYUGAbubWz0=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222184355-c68102f1d601/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222185554-bd9db9b0bb02 h1:29OtzCveQyRRtNdhfLhAgPDOfQAmZUpdUIoOSnSv3PE=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222185554-bd9db9b0bb02/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222221147-719c93130941 h1:cz1DL4KSVawCFFBjcnuiNyGA/s4kC2R3OVnCdV8iuE4=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222221147-719c93130941/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222221414-970d3b90377f h1:J75Z2f1tFGm4g9qewjud1/IAAfGLcnJJYrtLENl1xbU=
+github.com/alessandromr/go-aws-serverless v0.0.0-20200222221414-970d3b90377f/go.mod h1:hX/x5jgtaP1fg1YubCyImqi0Fo4YPQtrXnzK0YwUr8E=
 github.com/apparentlymart/go-cidr v1.0.1 h1:NmIwLZ/KdsjIUlhf+/Np40atNXm/+lZ5txfTJ/SpF+U=
 github.com/apparentlymart/go-cidr v1.0.1/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/apparentlymart/go-dump v0.0.0-20180507223929-23540a00eaa3/go.mod h1:oL81AME2rN47vu18xqj1S1jPIPuN7afo62yKTNn3XMM=
