@@ -18,30 +18,20 @@ Feel free to contribute.
 In this example is shown how simple is creating a function triggered by Api Gateway.
 If we were not using AWS Serverless Provider we would have to create all Api Gateway logics (Rest Api, Resources, Methods, Integrations, ...).
 
-
 ```hcl
 #created with AWS Serverless
-resource "aws_serverless_function" "test_function" {
-    filename      = "lambda_function_payload.zip"
-    function_name = "lambda_function_name"
-    handler       = "exports.test"
-    source_code_hash = "${filebase64sha256("lambda_function_payload.zip")}"
-    runtime = "nodejs8.10"
-
-    environment {
-        variables = {
-            foo = "bar"
-        }
-    }
-
-    event = {
-        http{
-            path = "/test"
-            method = "GET"
-            api_exist = false
-        }
-    }
-
+resource "serverless_aws_function_http" "testhttpfunction" {
+  filename = "main.zip"
+  memory_size = 256
+  function_name = "TestFunctionHTTP"
+  handler = "main"
+  runtime = "go1.x"
+  role = "arn:aws:iam::12344556768:role/LambdaTestRole"
+  event{
+    path = "test"
+    http_method = "ANY"
+    api_name="TestAPI"
+  }
 }
 ```
 
@@ -57,28 +47,17 @@ resource "aws_s3_bucket" "test_bucket" {
 }
 
 #created with AWS Serverless
-resource "aws_serverless_function" "test_function" {
-    filename      = "lambda_function_payload.zip"
-    function_name = "lambda_function_name"
-    handler       = "exports.test"
-    source_code_hash = "${filebase64sha256("lambda_function_payload.zip")}"
-    runtime = "nodejs8.10"
-
-    environment {
-        variables = {
-            foo = "bar"
-        }
-    }
-
-    event = {
-        s3{
-            bucket = aws_s3_bucket.test_bucket.id
-            suffix = ".json"
-            event_type = ["s3:ObjectCreated"]
-        }
-    }
-
+resource "serverless_aws_function_s3" "tests3" {
+  filename = "main.zip"
+  memory_size = 256
+  function_name = "S3TestFunction"
+  handler = "main"
+  runtime = "go1.x"
+  role = "arn:aws:iam::12345678910:role/LambdaTestRole"
+  event{
+    bucket = aws_s3_bucket.test_bucket.id
+    event_types = ["s3:ObjectCreated:*"]
+  }
 }
-
 ```
 
